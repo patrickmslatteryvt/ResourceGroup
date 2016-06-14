@@ -1,0 +1,11 @@
+# servers.yaml
+heat_template_version: 2016-04-08
+
+resources:
+
+  servers:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 2
+      resource_def:
+        type: https://raw.githubusercontent.com/patrickmslatteryvt/ResourceGroup/master/server.yaml
