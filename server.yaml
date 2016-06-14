@@ -1,0 +1,62 @@
+# server.yaml
+# Patrick M. Slattery - June 14th 2016
+
+heat_template_version: 2016-04-08
+
+parameters:
+
+  image:
+    type: string
+    default: CentOS 7 (PVHVM)
+
+  flavor:
+    type: string
+    default: 1 GB General Purpose v1
+
+  key_name:
+    type: string
+    default: shared_initial_build_key
+
+  server_count:
+    type: number
+    default: 2
+
+resources:
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+
+  entity:
+    type: Rackspace::CloudMonitoring::Entity
+    properties:
+      label: { get_param: "OS::stack_name" }
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+
+  agent_token:
+    type: Rackspace::CloudMonitoring::AgentToken
+    properties:
+      label: { get_param: "OS::stack_name" }
+
+  cpu_check:
+    type: Rackspace::CloudMonitoring::Check
+    properties:
+      entity: { get_resource: server }
+      type: agent.cpu
+      label: CPU check
+      details: {}
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+      period: 30
+      timeout: 10
+
+outputs:
