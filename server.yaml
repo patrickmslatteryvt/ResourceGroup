@@ -37,12 +37,35 @@ resources:
   server:
     type: OS::Nova::Server
     properties:
+      name: server%index%
       image: { get_param: image }
       flavor: { get_param: flavor }
       key_name: { get_param: key_name }
       metadata:
         rax-heat: { get_param: "OS::stack_id" }
         stack-name: { get_param: "OS::stack_name" }
+      user_data_format: RAW
+      config_drive: true
+      user_data:
+        str_replace:
+          template: |
+            #cloud-config
+            package_upgrade: true
+            write_files:
+            - content: |
+                [WANdisco-Git]
+                name=WANdisco Git - CentOS 7
+                baseurl=http://opensource.wandisco.com/centos/7/git/$basearch/
+                enabled=1
+                gpgcheck=1
+                gpgkey=http://opensource.wandisco.com/RPM-GPG-KEY-WANdisco
+              owner: root:root
+              path: /etc/yum.repos.d/wandisco-git.repo
+              permissions: '0644'
+            packages:
+              - git
+          params:
+            "{agent_token}": { get_resource: agent_token }
 
   entity:
     type: Rackspace::CloudMonitoring::Entity
@@ -70,4 +93,161 @@ resources:
       period: 30
       timeout: 10
 
+  filesystem_check:
+    type: Rackspace::CloudMonitoring::Check
+    properties:
+      entity: { get_resource: server }
+      type: agent.filesystem
+      label: Filesystem check
+      details:
+        target: "/"
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+      period: 60
+      timeout: 30
+
+  memory_check:
+    type: Rackspace::CloudMonitoring::Check
+    properties:
+      entity: { get_resource: server }
+      type: agent.memory
+      label: Memory check
+      details: {}
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+      period: 60
+      timeout: 30
+
+  load_average_check:
+    type: Rackspace::CloudMonitoring::Check
+    properties:
+      entity: { get_resource: server }
+      type: agent.load_average
+      label: Load average check
+      details: {}
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+      period: 60
+      timeout: 30
+
+  email_notification_warning:
+    type: Rackspace::CloudMonitoring::Notification
+    properties:
+      label: email_dms_team_warning
+      type: email
+      details:
+        address: "group@company.com"
+
+  email_notification_ok:
+    type: Rackspace::CloudMonitoring::Notification
+    properties:
+      label: email_dms_team_ok
+      type: email
+      details:
+        address: "group@company.com"
+
+  notify_dms_team:
+    type: Rackspace::CloudMonitoring::NotificationPlan
+    properties:
+      label: { get_param: "OS::stack_name" }
+      warning_state:
+      - { get_resource: email_notification_warning }
+      critical_state:
+      - { get_resource: email_notification_warning }
+
+  add_ok_notification:
+    type: Rackspace::CloudMonitoring::PlanNotifications
+    properties:
+      plan: { get_resource: notify_dms_team }
+      ok_state:
+      - { get_resource: email_notification_ok }
+
+# Send alert if CPU usage exceeds 85% for 2.5 minutes (5 x 30 second intervals)
+  alert_cpu_usage:
+    type: Rackspace::CloudMonitoring::Alarm
+    properties:
+      label: cpu_alarm
+      check: { get_resource: cpu_check }
+      plan: { get_resource: notify_dms_team }
+      criteria: |
+        :set consecutiveCount=5
+        if (metric['usage_average'] > 95) {
+            return new AlarmStatus(CRITICAL, 'CPU usage is #{usage_average}%');
+        }
+        if (metric['usage_average'] > 85) {
+            return new AlarmStatus(WARNING, 'CPU usage is #{usage_average}%');
+        }
+        return new AlarmStatus(OK);
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+
+
+# Send alert if filesystem usage exceeds 80%
+  alert_filesystem_usage:
+    type: Rackspace::CloudMonitoring::Alarm
+    properties:
+      label: filesystem_alarm
+      check: { get_resource: filesystem_check }
+      plan: { get_resource: notify_dms_team }
+      criteria: |
+        :set consecutiveCount=5
+        if (percentage(metric['used'], metric['total']) > 90) {
+          return new AlarmStatus(CRITICAL, "Disk usage is above your critical threshold of 90%");
+        }
+        if (percentage(metric['used'], metric['total']) > 80) {
+          return new AlarmStatus(WARNING, "Disk usage is above your warning threshold of 80%");
+        }
+        return new AlarmStatus(OK, "Disk usage is below your warning threshold of 80%");
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+
+# Send alert if memory usage exceeds 80%
+  alert_memory_usage:
+    type: Rackspace::CloudMonitoring::Alarm
+    properties:
+      label: filesystem_alarm
+      check: { get_resource: memory_check }
+      plan: { get_resource: notify_dms_team }
+      criteria: |
+        :set consecutiveCount=5
+        if (percentage(metric['actual_used'], metric['total']) > 90) {
+          return new AlarmStatus(CRITICAL, "Memory usage is above your critical threshold of 90%");
+        }
+        if (percentage(metric['actual_used'], metric['total']) > 80) {
+          return new AlarmStatus(WARNING, "Memory usage is above your warning threshold of 80%");
+        }
+        return new AlarmStatus(OK, "Memory usage is below your warning threshold of 80%");
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+
+# Send alert if load average exceeds 1.0 (For a single CPU system) over 5 minutes
+  alert_load_average_usage:
+    type: Rackspace::CloudMonitoring::Alarm
+    properties:
+      label: load_average_alarm
+      check: { get_resource: load_average_check }
+      plan: { get_resource: notify_dms_team }
+      criteria: |
+        # :set consecutiveCount=5
+        if (metric['5m'] > 1.5) {
+          return new AlarmStatus(CRITICAL, '5 minute load average is #{5m}, above your critical threshold of 1.5');
+        }
+        if (metric['5m'] > 1) {
+          return new AlarmStatus(WARNING, '5 minute load average is #{5m}, above your warning threshold of 1');
+        }
+        return new AlarmStatus(OK, '5 minute load average is #{5m}, below your warning threshold of 1');
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+
 outputs:
+
+  private_ip:
+    description: ServiceNet (Private) IP address
+    value: { get_attr: [server, networks, private, 0] }
