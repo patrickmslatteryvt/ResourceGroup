@@ -50,8 +50,23 @@ resources:
         str_replace:
           template: |
             #cloud-config
-            package_upgrade: true
+            package_upgrade: false
             write_files:
+            - content: |
+                monitoring_token ${AGENT_TOKEN}
+              owner: root:root
+              path: /etc/rackspace-monitoring-agent.cfg
+              permissions: '0644'
+            - content: |
+                [rackspace]
+                name = Rackspace Monitoring
+                baseurl = http://stable.packages.cloudmonitoring.rackspace.com/centos-7-x86_64/
+                gpgcheck = 1
+                enabled = 1
+                gpgkey = https://monitoring.api.rackspacecloud.com/pki/agent/centos-7.asc
+              owner: root:root
+              path: /etc/yum.repos.d/rackspace-monitoring.repo
+              permissions: '0644'
             - content: |
                 [WANdisco-Git]
                 name=WANdisco Git - CentOS 7
@@ -63,9 +78,21 @@ resources:
               path: /etc/yum.repos.d/wandisco-git.repo
               permissions: '0644'
             packages:
+              - deltarpm
+              - epel-release
               - git
+              - htop
+              - jq
+              - net-snmp
+              - net-snmp-utils
+              - rackspace-monitoring-agent
+            runcmd:
+              - systemctl is-enabled rackspace-monitoring-agent.service || systemctl enable rackspace-monitoring-agent.service
+              - systemctl restart rackspace-monitoring-agent.service
+              - yum clean all
+              - yum update -y
           params:
-            "{agent_token}": { get_resource: agent_token }
+            "${AGENT_TOKEN}": { get_resource: agent_token }
 
   entity:
     type: Rackspace::CloudMonitoring::Entity
