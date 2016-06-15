@@ -1,11 +1,33 @@
 # servers.yaml
 heat_template_version: 2016-04-08
 
+description: |
+  Creates a Heat ResourceGroup of CentOS v7.x servers.
+
+parameter_groups:
+
+- label: Server Settings
+  parameters:
+  - server_count
+
+parameters:
+
+  server_count:
+    label: Server count
+    description: Number of new servers to deploy
+    type: number
+    default: 2
+    constraints:
+    - range:
+        min: 2
+        max: 15
+      description: Must be between 1 and 15 servers.
+
 resources:
 
   servers:
     type: OS::Heat::ResourceGroup
     properties:
-      count: 2
+      count: { get_param: server_count }
       resource_def:
         type: https://raw.githubusercontent.com/patrickmslatteryvt/ResourceGroup/master/server.yaml
