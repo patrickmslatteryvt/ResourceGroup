@@ -8,6 +8,7 @@ resources:
   server:
     type: OS::Nova::Server
     properties:
+      name: server0
       image: CentOS 7 (PVHVM)
       flavor: 1 GB General Purpose v1
       key_name: shared_initial_build_key
