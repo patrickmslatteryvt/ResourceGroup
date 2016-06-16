@@ -26,8 +26,6 @@ parameters:
       - 2 GB General Purpose v1
       - 4 GB General Purpose v1
       - 8 GB General Purpose v1
-      description: |
-        Must be a valid Rackspace Cloud Server flavor for the region you have selected to deploy into.
 
   server_image:
     hidden: true
@@ -39,7 +37,6 @@ parameters:
     constraints:
     - allowed_values:
       - CentOS 7 (PVHVM)
-      description: Must be a supported operating system.
     immutable: true
 
   ssh_key:
@@ -50,9 +47,6 @@ parameters:
     default: shared_initial_build_key
     constraints:
       - custom_constraint: nova.keypair
-      - allowed_values:
-        - shared_initial_build_key
-        description: Must be a valid SSH key pair.
 
   parent_stack_id:
     hidden: true
