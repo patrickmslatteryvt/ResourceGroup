@@ -1,0 +1,16 @@
+heat_template_version: 2016-04-08
+
+description: |
+  Creates a minimal CentOS v7.x server using the General Purpose flavor.
+
+resources:
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: CentOS 7 (PVHVM)
+      flavor: 1 GB General Purpose v1
+      key_name: shared_initial_build_key
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
