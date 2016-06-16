@@ -1,0 +1,88 @@
+# secondary
+heat_template_version: 2015-10-15
+
+description: |
+ #### CentOSv7 Secondary
+
+parameter_groups:
+
+parameters:
+
+  server_name:
+    hidden: true
+    label: Server name (Do not change)
+    type: string
+    default: example-0
+
+  server_flavor:
+    label: Server Size
+    description: |
+      Use larger RAM sizes for production instances and 1GB for most dev and QA instances.
+    type: string
+    default: 1 GB General Purpose v1
+    constraints:
+    - allowed_values:
+      - 1 GB General Purpose v1
+      - 2 GB General Purpose v1
+      - 4 GB General Purpose v1
+      - 8 GB General Purpose v1
+      description: |
+        Must be a valid Rackspace Cloud Server flavor for the region you have selected to deploy into.
+
+  server_image:
+    hidden: true
+    label: Operating System
+    description: |
+      CentOS v7 is the default OS that DMS supports for new systems.
+    type: string
+    default: CentOS 7 (PVHVM)
+    constraints:
+    - allowed_values:
+      - CentOS 7 (PVHVM)
+      description: Must be a supported operating system.
+    immutable: true
+
+  ssh_key:
+    hidden: true
+    label: SSH key pair
+    description: Name of SSH key pair to be used for compute instance
+    type: string
+    default: shared_initial_build_key
+    constraints:
+      - custom_constraint: nova.keypair
+      - allowed_values:
+        - shared_initial_build_key
+        description: Must be a valid SSH key pair.
+
+  parent_stack_id:
+    hidden: true
+    label: Parent Stack (Do not change)
+    type: string
+    default: None
+
+resources:
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: "server_name" }
+      key_name: { get_param: "ssh_key" }
+      image: { get_param: server_image }
+      flavor: { get_param: server_flavor }
+      config_drive: true
+      user_data_format: RAW
+      metadata:
+        rax-heat: { get_param: "parent_stack_id" }
+        build_config: "monitoring_defaults"
+
+outputs:
+
+  public_ip:
+    description: Server Public IP
+    value:
+      get_attr: [server, accessIPv4]
+
+  private_ip:
+    description: ServiceNet (Private) IP address
+    value:
+      get_attr: [server, networks, private, 0]
