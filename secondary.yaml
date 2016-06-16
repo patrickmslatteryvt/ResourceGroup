@@ -34,9 +34,6 @@ parameters:
       CentOS v7 is the default OS that DMS supports for new systems.
     type: string
     default: CentOS 7 (PVHVM)
-    constraints:
-    - allowed_values:
-      - CentOS 7 (PVHVM)
     immutable: true
 
   ssh_key:
