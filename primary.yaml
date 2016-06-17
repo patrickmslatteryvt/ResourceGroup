@@ -105,7 +105,6 @@ parameters:
 resources:
 
   management_server:
-  server:
     type: "OS::Nova::Server"
     properties:
       name: mwgdldhapee01
