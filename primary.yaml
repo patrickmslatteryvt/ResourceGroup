@@ -126,7 +126,6 @@ resources:
               - git clone --depth=1 --branch=master http://10.223.80.79:3000/dms/server-setup.git /root/server-setup
               - rm -rf /root/server-setup/.git
               - export EMAIL=${EMAIL}
-              - export PACKAGE=${PACKAGE}
               - /root/server-setup/initial_install.sh
               - /root/server-setup/hapee_install.sh
               - /root/server-setup/conformity_monkey.sh brandcloud-hapee-tests
@@ -134,7 +133,6 @@ resources:
               - systemctl reboot
           params:
             "${EMAIL}": { get_param: email }
-            "${PACKAGE}": { get_param: package }
 
   servers:
     type: OS::Heat::ResourceGroup
@@ -151,3 +149,7 @@ resources:
           index: '%index%'
 
 outputs:
+
+  private_ip:
+    description: ServiceNet (Private) IP address of management server
+    value: { get_attr: management_server, networks, private, 0] }
