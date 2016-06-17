@@ -115,6 +115,7 @@ resources:
         rax-heat: { get_param: "OS::stack_id" }
         stack-name: { get_param: "OS::stack_name" }
         stack-creator: { get_param: "email" }
+        build_config: "monitoring_defaults"
       user_data_format: RAW
       config_drive: true
       user_data:
