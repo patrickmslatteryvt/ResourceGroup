@@ -152,4 +152,4 @@ outputs:
 
   private_ip:
     description: ServiceNet (Private) IP address of management server
-    value: { get_attr: management_server, networks, private, 0] }
+    value: { get_attr: management_server, networks, private, 0 }
