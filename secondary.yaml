@@ -42,7 +42,7 @@ parameters:
     description: |
       CentOS v7 is the default OS that DMS supports for new systems.
     type: string
-    default: CentOS 7 (PVHVM)
+    default: CentOS 7 (PVHVM) (Orchestration)
     immutable: true
 
   ssh_key:
@@ -69,10 +69,27 @@ resources:
       key_name: { get_param: "ssh_key" }
       image: { get_param: server_image }
       flavor: { get_param: server_flavor }
-      config_drive: true
-      user_data_format: RAW
       metadata:
         rax-heat: { get_param: "parent_stack_id" }
         build_config: "monitoring_defaults"
+      user_data_format: RAW
+      config_drive: true
+      user_data:
+        str_replace:
+          template: |
+            #cloud-config
+            package_upgrade: false
+            runcmd:
+              - git clone --depth=1 --branch=master http://10.223.80.79:3000/dms/server-setup.git /root/server-setup
+              - export EMAIL=${EMAIL}
+              - export PACKAGE=${PACKAGE}
+              - /root/server-setup/initial_install.sh
+              - /root/server-setup/hapee_install.sh
+              - /root/server-setup/conformity_monkey.sh brandcloud-hapee-tests
+              # Reboot upon successful deployment
+              - systemctl reboot
+          params:
+            "${EMAIL}": { get_param: email }
+            "${PACKAGE}": { get_param: package }
 
 outputs:
