@@ -1,12 +1,21 @@
 # secondary
-heat_template_version: 2015-10-15
+heat_template_version: 2016-10-14
 
 description: |
- #### CentOSv7 Secondary
+  #### CentOSv7 Secondary
+  This is a nested stack that defines a single application minion,
+  based on a vanilla CentOSv7 image.  This stack is included by
+  a ResourceGroup resource in the parent template (primary.yaml).
 
 parameter_groups:
 
 parameters:
+
+  name_map:
+    type: json
+
+  index:
+    type: string
 
   server_name:
     hidden: true
@@ -56,7 +65,7 @@ resources:
   server:
     type: OS::Nova::Server
     properties:
-      name: { get_param: "server_name" }
+      name: { get_param: [ name_map, { get_param: index } ] }
       key_name: { get_param: "ssh_key" }
       image: { get_param: server_image }
       flavor: { get_param: server_flavor }
@@ -67,13 +76,3 @@ resources:
         build_config: "monitoring_defaults"
 
 outputs:
-
-  public_ip:
-    description: Server Public IP
-    value:
-      get_attr: [server, accessIPv4]
-
-  private_ip:
-    description: ServiceNet (Private) IP address
-    value:
-      get_attr: [server, networks, private, 0]
