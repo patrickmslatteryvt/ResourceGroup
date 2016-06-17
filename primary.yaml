@@ -1,21 +1,54 @@
-# Adapted from: https://github.com/rackspace-orchestration-templates/galera-rc
-heat_template_version: 2015-10-15
+heat_template_version: 2016-10-14
 
 description: |
-  #### Production
-
-  This stack is running the latest version of Galera 10.1.
+  #### Test of a Heat ResourceGroup
 
 parameter_groups:
+- label: Server Settings
+  parameters:
+  - server_count
+- label: "Notifications"
+  parameters:
+  - email
 - label: rax-dev-params
   parameters:
-  - secondary_template
+  - hostname_map
+  - template
   - server_flavor
   - server_image
   - ssh_key
 
 parameters:
-  #Advanced Options
+
+  hostname_map:
+    type: json
+    default:
+      '0': mwgdldhapee02
+      '1': mwgdldhapee03
+      '2': mwgdldhapee04
+      '3': mwgdldhapee05
+      '4': mwgdldhapee06
+      '5': mwgdldhapee07
+      '6': mwgdldhapee08
+      '7': mwgdldhapee09
+      '8': mwgdldhapee10
+      '9': mwgdldhapee11
+      '10': mwgdldhapee12
+      '11': mwgdldhapee13
+      '12': mwgdldhapee14
+      '13': mwgdldhapee15
+      '14': mwgdldhapee16
+      '15': mwgdldhapee17
+      '16': mwgdldhapee18
+      '17': mwgdldhapee19
+      '18': mwgdldhapee20
+      '19': mwgdldhapee21
+      '20': mwgdldhapee22
+      '21': mwgdldhapee23
+      '22': mwgdldhapee24
+      '23': mwgdldhapee25
+      '24': mwgdldhapee26
+
   server_flavor:
     type: string
     default: 1 GB General Purpose v1
@@ -27,11 +60,11 @@ parameters:
 
   server_count:
     type: number
-    default: 3
-    label: Number of Secondary Servers
-    description: Number of secondary web nodes
+    default: 2
+    label: Number of servers
+    description: Number of servers to build
     constraints:
-      - range: { min: 0, max: 10 }
+      - range: { min: 1, max: 15 }
 
   server_image:
     type: string
@@ -43,11 +76,11 @@ parameters:
       - CentOS 7 (PVHVM) (Orchestration)
     immutable: true
 
-  secondary_template:
+  template:
     type: string
     default: https://raw.githubusercontent.com/patrickmslatteryvt/ResourceGroup/master/secondary.yaml
-    label: Secondary Template
-    description: Template to use for secondary servers
+    label: Nested Template
+    description: Template to use for nested servers
 
   ssh_key:
     label: SSH key pair
@@ -57,41 +90,65 @@ parameters:
       - custom_constraint: nova.keypair
       - allowed_values:
         - shared_initial_build_key
+
+  email:
+    label: Email address
+    description: |
+      Enter your mywebgrocer.com email address, you will be sent an email when the system is ready for use.
+    type: string
+    default: username@mywebgrocer.com
+    constraints:
+    - allowed_pattern: "^[a-zA-Z0-9_.+-]+@mywebgrocer.com$"
+      description: |
+        You must enter your mywebgrocer.com email address.
+
 resources:
 
-#  ssh_key:
-#    type: OS::Nova::KeyPair
-#    properties:
-#      name: { get_param: "OS::stack_id" }
-#      save_private_key: true
-
-  galera_server:
-    type: OS::Nova::Server
+  management_server:
+  server:
+    type: "OS::Nova::Server"
     properties:
-      name: { get_param: "OS::stack_name" }
+      name: mwgdldhapee01
       image: { get_param: server_image }
       flavor: { get_param: server_flavor }
-#      key_name: { get_resource: ssh_key }
       key_name: { get_param: ssh_key }
       metadata:
         rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+        stack-creator: { get_param: "email" }
+      user_data_format: RAW
+      config_drive: true
+      user_data:
+        str_replace:
+          template: |
+            #cloud-config
+            package_upgrade: false
+            runcmd:
+              - git clone --depth=1 --branch=master http://10.223.80.79:3000/dms/server-setup.git /root/server-setup
+              - rm -rf /root/server-setup/.git
+              - export EMAIL=${EMAIL}
+              - export PACKAGE=${PACKAGE}
+              - /root/server-setup/initial_install.sh
+              - /root/server-setup/hapee_install.sh
+              - /root/server-setup/conformity_monkey.sh brandcloud-hapee-tests
+              # Reboot upon successful deployment
+              - systemctl reboot
+          params:
+            "${EMAIL}": { get_param: email }
+            "${PACKAGE}": { get_param: package }
 
-  galera_secondary:
+  servers:
     type: OS::Heat::ResourceGroup
     properties:
       count: { get_param: server_count }
       resource_def:
-        type: { get_param: secondary_template }
+        type: { get_param: template }
         properties:
-#          ssh_key: { get_resource: ssh_key }
           ssh_key: { get_param: ssh_key }
           parent_stack_id: { get_param: "OS::stack_id" }
           server_image: { get_param: server_image }
           server_flavor: { get_param: server_flavor }
-          server_name:
-            str_replace:
-              template: stack-secondary-%index%
-              params:
-                stack: { get_param: "OS::stack_name" }
+          name_map: {get_param: hostname_map}
+          index: '%index%'
 
 outputs:
