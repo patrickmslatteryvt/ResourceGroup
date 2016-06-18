@@ -71,6 +71,7 @@ resources:
     type: OS::Nova::Server
     properties:
       name: { get_param: [ name_map, { get_param: index } ] }
+      user_data_update_policy: IGNORE
       key_name: { get_param: "ssh_key" }
       image: { get_param: server_image }
       flavor: { get_param: server_flavor }
