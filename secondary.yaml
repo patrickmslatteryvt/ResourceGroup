@@ -71,7 +71,7 @@ resources:
       flavor: { get_param: server_flavor }
       metadata:
         rax-heat: { get_param: "parent_stack_id" }
-        build_config: "monitoring_defaults"
+#        build_config: "monitoring_defaults"
       user_data_format: RAW
       config_drive: true
       user_data:
