@@ -87,5 +87,6 @@ resources:
               # Reboot upon successful deployment
               - systemctl reboot
           params:
+            "${SERVER_NAME}": { get_param: server_name }
 
 outputs:
