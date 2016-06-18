@@ -113,6 +113,7 @@ resources:
     type: "OS::Nova::Server"
     properties:
       name: mwgdldhapee01
+      user_data_update_policy: IGNORE
       image: { get_param: server_image }
       flavor: { get_param: server_flavor }
       key_name: { get_param: ssh_key }
