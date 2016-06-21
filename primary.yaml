@@ -117,12 +117,9 @@ resources:
       config: |
         #!/bin/bash -v
         git clone --depth=1 --branch=master http://10.223.80.79:3000/dms/server-setup.git /root/server-setup
-        export EMAIL=${EMAIL}
         /root/server-setup/initial_install.sh
         /root/server-setup/hapee_install.sh
         /root/server-setup/conformity_monkey.sh brandcloud-hapee-tests
-      params:
-        "${EMAIL}": { get_param: email }
 
   management_server_deploy:
     type: OS::Heat::SoftwareDeployment
