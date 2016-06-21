@@ -110,6 +110,29 @@ parameters:
 
 resources:
 
+  management_server_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: |
+        #!/bin/bash -v
+        git clone --depth=1 --branch=master http://10.223.80.79:3000/dms/server-setup.git /root/server-setup
+        export EMAIL=${EMAIL}
+        /root/server-setup/initial_install.sh
+        /root/server-setup/hapee_install.sh
+        /root/server-setup/conformity_monkey.sh brandcloud-hapee-tests
+      params:
+        "${EMAIL}": { get_param: email }
+
+  management_server_deploy:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      config:
+        get_resource: management_server_config
+      server:
+        get_resource: management_server
+
   management_server:
     type: "OS::Nova::Server"
     properties:
@@ -118,30 +141,15 @@ resources:
       image: { get_param: server_image }
       flavor: { get_param: server_flavor }
       key_name: { get_param: ssh_key }
+      software_config_transport: POLL_TEMP_URL
+      user_data_format: SOFTWARE_CONFIG
+      config_drive: true
       metadata:
-        rax-heat: { get_param: "OS::stack_id" }
+        rax-heat: { get_param: "parent_stack_id" }
         stack-name: { get_param: "OS::stack_name" }
         stack-creator: { get_param: "email" }
-#        build_config: "monitoring_defaults"
+        build_config: "monitoring_defaults"
         RackConnectLBPool: { get_param: lb_pools }
-      user_data_format: RAW
-      config_drive: true
-      user_data:
-        str_replace:
-          template: |
-            #cloud-config
-            package_upgrade: false
-            runcmd:
-              - git clone --depth=1 --branch=master http://10.223.80.79:3000/dms/server-setup.git /root/server-setup
-              - rm -rf /root/server-setup/.git
-              - export EMAIL=${EMAIL}
-              - /root/server-setup/initial_install.sh
-              - /root/server-setup/hapee_install.sh
-              - /root/server-setup/conformity_monkey.sh brandcloud-hapee-tests
-              # Reboot upon successful deployment
-              - systemctl reboot
-          params:
-            "${EMAIL}": { get_param: email }
 
   servers:
     type: OS::Heat::ResourceGroup
